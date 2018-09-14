@@ -1,16 +1,6 @@
 import json
 import pandas as pd
 ###############################################################################
-#####                    Infor for the GeoJSON file                       #####
-###############################################################################
-time_map = {"type": "FeatureCollection",
-            "name": "hungary",
-            "crs":
-                {"type": "name", "properties":
-                    {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
-            "features": []}
-
-###############################################################################
 #####          Getting place names and normalizing them                   #####
 ###############################################################################
 df = pd.read_csv('data/time_map.tsv.csv', sep='\t', encoding='utf-8')
@@ -42,10 +32,10 @@ budapest = {'Budapest 01. ker.': 'I. kerület',
             'Budapest 22. ker.': 'XXII. kerület',
             'Budapest 23. ker.': 'XXIII. kerület'}
 
-discticts = {}
+districts = {}
 for k in budapest:
     v = budapest[k]
-    discticts[v] = k
+    districts[v] = k
 ###############################################################################
 #####              Putting stat data into the GeoJSON                     #####
 ###############################################################################
@@ -53,35 +43,37 @@ with open('data/merged.geojson', 'r') as f:
     hu_json = json.load(f)
 
 for feature in hu_json['features']:
+    n = hu_json['features'].index(feature)
     if 'NAME' in feature['properties']:
+        name = feature['properties']['NAME']
         # either it is on our list, or it is a district
-        if feature['properties']['NAME'] in municipalities\
-                or feature['properties']['NAME'] in budapest.values():
-            to_add = {"type": "Feature"}
-            to_add['properties'] = {}
-            if feature['properties']['NAME'] in municipalities:
-                name = feature['properties']['NAME']
-            else:
-                name = discticts[feature['properties']['NAME']]
-            to_add['properties']['name'] = name
-            geometry = feature['geometry']
-            to_add['geometry'] = {}
-            to_add['geometry']['type'] = geometry['type']
-            to_add['geometry']['coordinates'] = geometry['coordinates']
+        if name in budapest.values():
+            hu_json['features'][n]['properties']['NAME'] = districts[name]
+            name = districts[name]
+        if name in municipalities:
             # we can't call a property starting with a number in d3
             # so i put an y before each year
-            to_add['properties']['y2007'] = df.loc[name]['2007']
-            to_add['properties']['y2008'] = df.loc[name]['2008']
-            to_add['properties']['y2009'] = df.loc[name]['2009']
-            to_add['properties']['y2010'] = df.loc[name]['2010']
-            to_add['properties']['y2011'] = df.loc[name]['2011']
-            to_add['properties']['y2012'] = df.loc[name]['2012']
-            to_add['properties']['y2013'] = df.loc[name]['2013']
-            to_add['properties']['y2014'] = df.loc[name]['2014']
-            to_add['properties']['y2015'] = df.loc[name]['2015']
-            to_add['properties']['y2016'] = df.loc[name]['2016']
-            to_add['properties']['y2017'] = df.loc[name]['2017']
-            time_map['features'].append(to_add)
+            hu_json['features'][n]['properties']['y2007'] = df.loc[name]['2007']
+            hu_json['features'][n]['properties']['y2008'] = df.loc[name]['2008']
+            hu_json['features'][n]['properties']['y2009'] = df.loc[name]['2009']
+            hu_json['features'][n]['properties']['y2010'] = df.loc[name]['2010']
+            hu_json['features'][n]['properties']['y2011'] = df.loc[name]['2011']
+            hu_json['features'][n]['properties']['y2012'] = df.loc[name]['2012']
+            hu_json['features'][n]['properties']['y2013'] = df.loc[name]['2013']
+            hu_json['features'][n]['properties']['y2014'] = df.loc[name]['2014']
+            hu_json['features'][n]['properties']['y2015'] = df.loc[name]['2015']
+            hu_json['features'][n]['properties']['y2016'] = df.loc[name]['2016']
+            hu_json['features'][n]['properties']['y2017'] = df.loc[name]['2017']
 
 with open('data/habitat.geojson', 'w') as f:
-    json.dump(time_map, f)
+    json.dump(hu_json, f)
+
+with open('data/time_map.tsv.csv', 'r') as f:
+    with open('data/time_corrected.tsv', 'w') as of:
+        for l in f:
+            l = l.strip()
+            ls = l.split('\t')
+            if ls[0] in budapest.keys():
+                ls[0] = budapest[ls[0]]
+            new_line = '\t'.join(ls) + '\n'
+            of.write(new_line)
